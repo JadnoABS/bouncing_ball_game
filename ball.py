@@ -1,7 +1,7 @@
 import pygame
 
 class Ball:
-    def __init__(self, radius, vel, color, jump_vel, winSize):
+    def __init__(self, radius, vel, color, winSize, jump_vel=10):
         self.radius = radius
         self.vel = vel
         self.color = color

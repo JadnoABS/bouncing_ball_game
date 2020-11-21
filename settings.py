@@ -40,10 +40,12 @@ class Settings():
             'DarkForest': pygame.image.load('assets/images/DarkForest.png'),
             'DarkSunset': pygame.image.load('assets/images/DarkSunset.png')
             }
-        for bg in bgrounds.values():
+        for bg_name, bg_img in bgrounds.items():
             bg_pos[0] += 300
-            bg = pygame.transform.scale(bg, (160,90))
-            display.blit(bg, bg_pos)
+            if bg_name == self.get('screenSettings', 'background'):
+                bg_selection_pos = bg_pos
+            bg_img = pygame.transform.scale(bg_img, (160,90))
+            display.blit(bg_img, bg_pos)
 
         font = pygame.font.Font('freesansbold.ttf', 30)
         color_label = font.render('Ball Color:', True, (0,0,0))
@@ -54,18 +56,27 @@ class Settings():
         for color in colors:
             radius = 50
             color_pos[0] += 300
+            if ','.join(map(str, color)) == self.get('playerSettings', 'ballcolor'):
+                color_selection_pos = color_pos
             pygame.draw.circle(display, color, color_pos, radius)
 
         pygame.display.update()
 
         backToGame = False
-        while not backToGame:
+        quit = False
+        while not backToGame and not quit:
             mouse = pygame.mouse.get_pos()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
+                    quit = True
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if 10 <= mouse[0] <= 60 and 10 <= mouse[1] <= 60:
+                    save_button = pygame.Rect((sttngs_bg.width/2 - 150, sttngs_bg.y + sttngs_bg.height*7/8), (300, 50))
+                    save_button = pygame.draw.rect(display, (200, 100, 50), save_button)
+                    font = pygame.font.Font('freesansbold.ttf', 30)
+                    save_text = font.render('Save Changes', True, (0,0,0))
+                    display.blit(save_text, (save_button.x + save_button.width/2 - save_text.get_width()/2, save_button.y + save_button.height/2 - save_text.get_height()/2))
+
+                    if save_button.x <= mouse[0] <= save_button.x + save_button.width and save_button.y <= mouse[1] <= save_button.y + save_button.height:
                         backToGame = True
                         
                     res_pos[0] -= len(resolutions) * 300
@@ -75,11 +86,11 @@ class Settings():
                         if res_pos[0] <= mouse[0] <= res_option_end[0] and res_pos[1] <= mouse[1] <= res_option_end[1]:
                             self.set('screenSettings', 'width', str(res[0]))
                             self.set('screenSettings', 'height', str(res[1]))
-                    
-                    bg_pos[0] -= len(bgrounds) * 300     
+
+                    bg_pos[0] -= len(bgrounds) * 300
                     for bg in bgrounds:
                         bg_pos[0] += 300
-                        bg_option_end = [bg_pos[0] + bgrounds[bg].get_width(), bg_pos[1] + bgrounds[bg].get_height()]
+                        bg_option_end = [bg_pos[0] + 160, bg_pos[1] + 90]
                         if bg_pos[0] <= mouse[0] <= bg_option_end[0] and bg_pos[1] <= mouse[1] <= bg_option_end[1]:
                             self.set('screenSettings', 'background', bg)
                     
@@ -88,7 +99,9 @@ class Settings():
                         color_pos[0] += 300
                         color_option_end = [color_pos[0] + radius, color_pos[1] + radius]
                         if color_pos[0] - radius <= mouse[0] <= color_option_end[0] and color_pos[1] - radius <= mouse[1] <= color_option_end[1]:
-                            str_color = ','.join(str(color) for color in color)
+                            str_color = ','.join(map(str, color))
                             self.set('playerSettings', 'ballcolor', str_color)
-                            
-        
+            pygame.display.update()
+
+        if quit:
+            return 'Quit'

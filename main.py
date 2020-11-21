@@ -11,9 +11,6 @@ pygame.init()
 gameSettings = Settings()
 screen_size = (int(gameSettings.get('screenSettings', 'width')), int(gameSettings.get('screenSettings', 'height')))
 framerate = 60
-gravity = screen_size[1] / 720
-initial_jump_vel = screen_size[1] / 24
-elements_vel = screen_size[0] / 144
 game_over = False
 
 # Custom settings
@@ -22,19 +19,23 @@ ball_color = tuple(map(int, gameSettings.get('playerSettings', 'ballcolor').spli
 # Screen elements
 display = pygame.display.set_mode(screen_size)
 pygame.display.set_caption("Bouncing Ball Game")
-background_image = pygame.image.load('assets/images/{}.png'.format(gameSettings.get('screenSettings', 'Background'))).convert_alpha()
-background_image = pygame.transform.scale(background_image, screen_size)
+background_image = pygame.image.load('assets/images/{}.png'.format(gameSettings.get('screenSettings', 'Background')))
+background_image = pygame.transform.scale(background_image.convert_alpha(), screen_size)
 
-def refreshSettings():
+def runGame():
+    # Screen Elements Settings
     screen_size = (int(gameSettings.get('screenSettings', 'Width')), int(gameSettings.get('screenSettings', 'Height')))
     background_image = pygame.image.load('assets/images/{}.png'.format(gameSettings.get('screenSettings', 'Background')))
+    background_image = pygame.transform.scale(background_image.convert_alpha(), screen_size)
     ball_color = tuple(map(int, gameSettings.get('playerSettings', 'ballColor').split(',')))
     display = pygame.display.set_mode(screen_size)
 
-def runGame():
     # Game Elements Settings
+    gravity = screen_size[1] / 720
+    initial_jump_vel = screen_size[1] / 24
+    elements_vel = screen_size[0] / 144
     game_running = True
-    char = Ball(screen_size[0] / 25, screen_size[0] / 144, ball_color, initial_jump_vel, screen_size)
+    char = Ball(screen_size[0] / 25, screen_size[0] / 144, ball_color, screen_size, jump_vel=initial_jump_vel)
     floor = pygame.Rect(0, screen_size[1] - 100, screen_size[0], 100)
     coins = []
     spikes = []
@@ -103,8 +104,8 @@ def runGame():
                 char.isJumping = False
 
         # Char, coin and score drawing and screen refresh
-        display.fill((255,255,255))
-        display.blit(background_image, (0,0))
+        display.fill((255, 255, 255))
+        display.blit(background_image, (0, 0))
 
         font = pygame.font.Font('freesansbold.ttf', 30)
         text = font.render("Score: {}".format(points), True, (100, 255, 10))
@@ -122,7 +123,6 @@ def runGame():
         pygame.quit()
 
 def showGameOver():
-
     # Draw Game Over message
     font = pygame.font.Font('freesansbold.ttf', 50)
     text_gameover = font.render("Game Over", True, (200, 200, 0))
@@ -137,27 +137,42 @@ def showGameOver():
 
     pygame.display.flip()
     resume = False
+    quit = False
 
-    while not resume:
+    while not resume and not quit:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
+                quit = True
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     resume = True
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouse = pygame.mouse.get_pos()
+                sttngs_rect = sttngs_img.get_rect()
+                if 10 <= mouse[0] <= sttngs_rect.width + 10 and 10 <= mouse[1] <= sttngs_rect.height + 10:
+                    gameSettings.openScreen(screen_size, display)
+                    showStartScreen()
         
         pygame.time.delay(1000 // framerate)
-
-    runGame()
+    if resume:
+        runGame()
+    elif quit: 
+        pygame.quit()
 
 def showStartScreen():
+    # Screen Elements Settings
+    screen_size = (int(gameSettings.get('screenSettings', 'Width')), int(gameSettings.get('screenSettings', 'Height')))
+    background_image = pygame.image.load('assets/images/{}.png'.format(gameSettings.get('screenSettings', 'Background'))).convert_alpha()
+    ball_color = tuple(map(int, gameSettings.get('playerSettings', 'ballColor').split(',')))
+    background_image = pygame.transform.scale(background_image, screen_size)
+    display = pygame.display.set_mode(screen_size)
+
     game_running = False
     
     # Draw Start Screen Ball and Floor
     display.fill((255,255,255))
     display.blit(background_image, (0,0))
-
-    char = Ball(screen_size[0] / 25, screen_size[0] / 144, ball_color, initial_jump_vel, screen_size)
+    char = Ball(screen_size[0] / 25, screen_size[0] / 144, ball_color, screen_size)
     floor = pygame.Rect(0, screen_size[1] - 100, screen_size[0], 100)
     pygame.draw.rect(display, (0, 0, 255), floor)
     char.draw(display)
@@ -175,10 +190,11 @@ def showStartScreen():
     display.blit(text_play, (screen_size[0] / 2 - text_play.get_rect().width/2, screen_size[1] - 150))
     pygame.display.flip()
 
-    while not game_running:
+    quit = False
+    while not game_running and not quit:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
+                quit = True
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     game_running = True
@@ -186,12 +202,16 @@ def showStartScreen():
                 mouse = pygame.mouse.get_pos()
                 sttngs_rect = sttngs_img.get_rect()
                 if 10 <= mouse[0] <= sttngs_rect.width + 10 and 10 <= mouse[1] <= sttngs_rect.height + 10:
-                    gameSettings.openScreen(screen_size, display)
-                    refreshSettings()
-                    showStartScreen()
+                    sttngs = gameSettings.openScreen(screen_size, display)
+                    if sttngs == 'Quit':
+                        quit = True
+                    else:
+                        showStartScreen()
 
         pygame.time.delay(1000 // framerate)
-
-    runGame()
+    if game_running:
+        runGame()
+    elif quit:
+        pygame.quit()
 
 showStartScreen()
