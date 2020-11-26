@@ -10,7 +10,6 @@ class Spike:
         self.rect = pygame.Rect(self.pos[0], self.pos[1], self.width, self.height)
 
     def draw(self, display):
-        #self.rect.left = self.pos[0]
         self.vertices = [
             [self.pos[0], self.pos[1]], 
             [self.pos[0]+self.width/8, self.pos[1]-30], 

@@ -1,8 +1,13 @@
+#--- Bouncing Ball Game [Version 1.0] (I am working on a better name hahah) ---#
+#--- Programed by Jadno Barbosa - November 2020 (During quarantine and last year of high school) ---#
+
 import pygame
-from random import random, choice
+from random import random
+
 from settings import Settings
 from ball import Ball
 from coin import Coin
+from bomb import Bomb
 from spike import Spike
 
 pygame.init()
@@ -12,6 +17,7 @@ gameSettings = Settings()
 screen_size = (int(gameSettings.get('screenSettings', 'width')), int(gameSettings.get('screenSettings', 'height')))
 framerate = 60
 game_over = False
+clock = pygame.time.Clock()
 
 # Custom settings
 ball_color = tuple(map(int, gameSettings.get('playerSettings', 'ballcolor').split(',')))
@@ -19,38 +25,42 @@ ball_color = tuple(map(int, gameSettings.get('playerSettings', 'ballcolor').spli
 # Screen elements
 display = pygame.display.set_mode(screen_size)
 pygame.display.set_caption("Bouncing Ball Game")
-background_image = pygame.image.load('assets/images/{}.png'.format(gameSettings.get('screenSettings', 'Background')))
+background_image = pygame.image.load('assets/images/backgrounds/{}.png'.format(gameSettings.get('screenSettings', 'Background')))
 background_image = pygame.transform.scale(background_image.convert_alpha(), screen_size)
 
 def runGame():
     # Screen Elements Settings
     screen_size = (int(gameSettings.get('screenSettings', 'Width')), int(gameSettings.get('screenSettings', 'Height')))
-    background_image = pygame.image.load('assets/images/{}.png'.format(gameSettings.get('screenSettings', 'Background')))
+    background_image = pygame.image.load('assets/images/backgrounds/{}.png'.format(gameSettings.get('screenSettings', 'Background')))
     background_image = pygame.transform.scale(background_image.convert_alpha(), screen_size)
     ball_color = tuple(map(int, gameSettings.get('playerSettings', 'ballColor').split(',')))
     display = pygame.display.set_mode(screen_size)
+    frame = 0
 
     # Game Elements Settings
     gravity = screen_size[1] / 720
     initial_jump_vel = screen_size[1] / 24
-    elements_vel = screen_size[0] / 144
+    elements_vel = screen_size[0] / 216
     game_running = True
     char = Ball(screen_size[0] / 25, screen_size[0] / 144, ball_color, screen_size, jump_vel=initial_jump_vel)
     floor = pygame.Rect(0, screen_size[1] - 100, screen_size[0], 100)
     coins = []
+    bombs = []
     spikes = []
-    spike_count = framerate * 2
-    points = 0
+    score = 0
     game_over = False
     display.blit(background_image, (0,0))
 
     # Game Loop
     while game_running and not game_over:
-        pygame.time.delay(1000 // framerate)
+        clock.tick(framerate)
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game_running = False
+
+        if frame % (framerate * 20) == 0:
+            elements_vel += 3
 
         # Coin Spawning
         if random() >= 0.99:
@@ -58,25 +68,43 @@ def runGame():
 
         for coin in coins:
             coin.pos[0] -= elements_vel
-            if coin.rect.colliderect(char.rect):
-                pygame.mixer.music.load('assets/sounds/get_coin.mp3')
-                pygame.mixer.music.play()
-                points += 1
+            if char.rect:
+                if coin.rect.colliderect(char.rect):
+                    pygame.mixer.music.load('assets/sounds/get_coin.mp3')
+                    pygame.mixer.music.play()
+                    score += 1
+                    coins.remove(coin)
+            if coin.pos[0] < -coin.rect.width:
                 coins.remove(coin)
 
+        # Bombs spawning
+        if random() >= 0.99 and len(bombs) < 5: 
+            bombs.append(Bomb(screen_size[1] / 14, screen_size))
+
+        for bomb in bombs:
+            bomb.pos[0] -= elements_vel
+            if char.rect:
+                if bomb.rect.colliderect(char.rect):
+                    bomb.explode(display)
+                    pygame.mixer.music.load('assets/sounds/explosion.wav')
+                    pygame.mixer.music.play()
+                    game_over = True
+            if bomb.pos[0] < -bomb.rect.width:
+                bombs.remove(bomb)
+
         # Spikes Spawning
-        if spike_count > 0:
-            spike_count -= 1
-        elif spike_count == 0:
+        if frame % 120 == 0:
             spikes.append(Spike(100, screen_size[0] + 100, screen_size[1] - 100))
-            spike_count = framerate * 2
 
         for spike in spikes:
             spike.pos[0] -= elements_vel
-            if spike.rect.colliderect(char.rect):
-                pygame.mixer.music.load('assets/sounds/lost.wav')
-                pygame.mixer.music.play()
-                game_over = True
+            if char.rect:
+                if spike.rect.colliderect(char.rect):
+                    pygame.mixer.music.load('assets/sounds/lost.wav')
+                    pygame.mixer.music.play()
+                    game_over = True
+            if spike.pos[0] < -spike.width:
+                spikes.remove(spike)
 
         # Char movement
         keys = pygame.key.get_pressed()
@@ -108,16 +136,21 @@ def runGame():
         display.blit(background_image, (0, 0))
 
         font = pygame.font.Font('freesansbold.ttf', 30)
-        text = font.render("Score: {}".format(points), True, (100, 255, 10))
+        text = font.render("Score: {}".format(score), True, (100, 255, 10))
         display.blit(text, (screen_size[0] // 2 - 50, 50))
         pygame.draw.rect(display, (0, 0, 255), floor)
         char.draw(display)
-        for spike in spikes:
-            spike.draw(display)
         for coin in coins:
             coin.draw(display)
+        for bomb in bombs:
+            bomb.draw(display)
+        for spike in spikes:
+            spike.draw(display)
+        frame += 1
         pygame.display.update()
     if game_over:
+        if score > int(gameSettings.get('playerSettings', 'bestscore')):
+            gameSettings.set('playerSettings', 'bestscore', score)
         showGameOver()
     elif not game_running:
         pygame.quit()
@@ -153,7 +186,7 @@ def showGameOver():
                     gameSettings.openScreen(screen_size, display)
                     showStartScreen()
         
-        pygame.time.delay(1000 // framerate)
+        clock.tick(framerate)
     if resume:
         runGame()
     elif quit: 
@@ -162,7 +195,7 @@ def showGameOver():
 def showStartScreen():
     # Screen Elements Settings
     screen_size = (int(gameSettings.get('screenSettings', 'Width')), int(gameSettings.get('screenSettings', 'Height')))
-    background_image = pygame.image.load('assets/images/{}.png'.format(gameSettings.get('screenSettings', 'Background'))).convert_alpha()
+    background_image = pygame.image.load('assets/images/backgrounds/{}.png'.format(gameSettings.get('screenSettings', 'Background'))).convert_alpha()
     ball_color = tuple(map(int, gameSettings.get('playerSettings', 'ballColor').split(',')))
     background_image = pygame.transform.scale(background_image, screen_size)
     display = pygame.display.set_mode(screen_size)
@@ -186,8 +219,11 @@ def showStartScreen():
 
     # Draw play text
     font = pygame.font.Font('freesansbold.ttf', 30)
+    best_score = gameSettings.get('playerSettings', 'bestscore')
+    text_score = font.render('Best Score: ' + best_score, True, (200, 200, 0))
+    display.blit(text_score, (screen_size[0]/2 - text_score.get_width()/2, 100))
     text_play = font.render("Press SPACE to play", True, (200, 200, 0))
-    display.blit(text_play, (screen_size[0] / 2 - text_play.get_rect().width/2, screen_size[1] - 150))
+    display.blit(text_play, (screen_size[0]/2 - text_play.get_width()/2, screen_size[1] - 150))
     pygame.display.flip()
 
     quit = False
@@ -208,10 +244,11 @@ def showStartScreen():
                     else:
                         showStartScreen()
 
-        pygame.time.delay(1000 // framerate)
+        clock.tick(framerate)
     if game_running:
         runGame()
     elif quit:
         pygame.quit()
 
+# Game Start Point
 showStartScreen()
