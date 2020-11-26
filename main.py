@@ -74,7 +74,7 @@ def runGame():
                     pygame.mixer.music.play()
                     score += 1
                     coins.remove(coin)
-            if coin.pos[0] < -coin.rect.width:
+            if coin.pos[0] < 0 - coin.rect.width:
                 coins.remove(coin)
 
         # Bombs spawning
@@ -89,7 +89,7 @@ def runGame():
                     pygame.mixer.music.load('assets/sounds/explosion.wav')
                     pygame.mixer.music.play()
                     game_over = True
-            if bomb.pos[0] < -bomb.rect.width:
+            if bomb.pos[0] < 0 - bomb.rect.width:
                 bombs.remove(bomb)
 
         # Spikes Spawning
@@ -103,7 +103,7 @@ def runGame():
                     pygame.mixer.music.load('assets/sounds/lost.wav')
                     pygame.mixer.music.play()
                     game_over = True
-            if spike.pos[0] < -spike.width:
+            if spike.pos[0] < 0 - spike.width:
                 spikes.remove(spike)
 
         # Char movement
