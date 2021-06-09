@@ -70,7 +70,7 @@ def runGame():
             coin.pos[0] -= elements_vel
             if char.rect:
                 if coin.rect.colliderect(char.rect):
-                    pygame.mixer.music.load('assets/sounds/get_coin.mp3')
+                    pygame.mixer.music.load('assets/sounds/get_coin.wav')
                     pygame.mixer.music.play()
                     score += 1
                     coins.remove(coin)
